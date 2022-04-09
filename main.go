@@ -4,44 +4,29 @@ import (
 	"encoding/binary"
 	"flag"
 	"fmt"
-	"github.com/alttpo/snes/asm"
 	"github.com/alttpo/snes/emulator/bus"
 	"github.com/alttpo/snes/emulator/cpu65c816"
 	"github.com/alttpo/snes/emulator/memory"
-	"github.com/alttpo/snes/mapping/lorom"
 	"io"
 	"io/ioutil"
 	"os"
 	"time"
 )
 
-func newEmitterAt(s *System, addr uint32, generateText bool) *asm.Emitter {
-	lin, _ := lorom.BusAddressToPak(addr)
-	a := asm.NewEmitter(s.ROM[lin:], generateText)
-	a.SetBase(addr)
-	return a
-}
-
 func main() {
 	var err error
 
 	trace := flag.Bool("t", false, "CPU tracing")
 	delay := flag.Duration("d", time.Duration(0), "delay between CPU instructions")
+	inputW := flag.String("w", "", "initialize WRAM from this file")
+	input5 := flag.String("5", "", "initialize $5000..7FFF from this file")
+
+	pc := flag.Uint("pc", 0x8000, "PC entry point; also sets program banK register")
+	sp := flag.Uint("sp", 0x1FF, "SP (stack pointer)")
+	p := flag.Uint("p", 0x34, "P (processor flags)")
 	flag.Parse()
 
 	fname := flag.Arg(0)
-	if fname == "" {
-		fmt.Println("required SFC path as first argument")
-		flag.Usage()
-		return
-	}
-
-	var f *os.File
-	f, err = os.Open(fname)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
 
 	var s *System
 
@@ -55,13 +40,23 @@ func main() {
 		return
 	}
 
-	_, err = f.Read(s.ROM[:])
-	if err != nil {
+	write16(s.ROM[:], 0x7FE6, 0x8000)
+	write16(s.ROM[:], 0x7FFE, 0x8000)
+	write16(s.ROM[:], 0x7FEC, 0x8000)
+	write16(s.ROM[:], 0x7FFC, 0x8000)
+
+	// load ROM:
+	if err = loadFile(fname, s.ROM[:]); err != nil {
 		fmt.Println(err)
 		return
 	}
-	err = f.Close()
-	if err != nil {
+	// load WRAM:
+	if err = loadFile(*inputW, s.WRAM[:]); err != nil {
+		fmt.Println(err)
+		return
+	}
+	// load dynamic RAM at $5000..7FFF:
+	if err = loadFile(*input5, s.Dyn[:]); err != nil {
 		fmt.Println(err)
 		return
 	}
@@ -74,6 +69,12 @@ func main() {
 
 	// start from RESET vector:
 	s.CPU.Reset()
+
+	// override PC, K, SP, and P:
+	s.SetPC(uint32(*pc))
+	s.CPU.SP = uint16(*sp)
+	s.CPU.SetFlags(byte(*p))
+
 	frame := uint64(0)
 	for {
 		// execute until WDM is hit:
@@ -106,6 +107,25 @@ func main() {
 
 		frame++
 	}
+}
+
+func loadFile(fname string, dest []byte) (err error) {
+	if fname == "" {
+		return
+	}
+
+	var f *os.File
+	f, err = os.Open(fname)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	_, err = f.Read(dest)
+	if err != nil {
+		return
+	}
+
+	return
 }
 
 func read16(b []byte, addr uint32) uint16 {
