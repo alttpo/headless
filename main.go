@@ -40,10 +40,8 @@ func main() {
 		return
 	}
 
-	write16(s.ROM[:], 0x7FE6, 0x8000)
-	write16(s.ROM[:], 0x7FFE, 0x8000)
-	write16(s.ROM[:], 0x7FEC, 0x8000)
-	write16(s.ROM[:], 0x7FFC, 0x8000)
+	write8(s.ROM[:], 0x0, 0x42)
+	write8(s.ROM[:], 0x1, 0xFF)
 
 	// load ROM:
 	if err = loadFile(fname, s.ROM[:]); err != nil {
