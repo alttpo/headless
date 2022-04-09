@@ -69,6 +69,8 @@ func main() {
 		s.LoggerCPU = os.Stdout
 	}
 
+	os.Mkdir("data", 0644)
+
 	// start from RESET vector:
 	s.CPU.Reset()
 	frame := uint64(0)
