@@ -40,23 +40,39 @@ func main() {
 		return
 	}
 
+	// WDM #$FF
 	write8(s.ROM[:], 0x0, 0x42)
 	write8(s.ROM[:], 0x1, 0xFF)
 
 	// load ROM:
 	if err = loadFile(fname, s.ROM[:]); err != nil {
-		fmt.Println(err)
-		return
+		if err == errNoFile {
+			if *pc == 0x8000 {
+				fmt.Println("no ROM file loaded and custom PC not set so execution will halt")
+			}
+			err = nil
+		} else {
+			fmt.Println(err)
+			return
+		}
 	}
 	// load WRAM:
 	if err = loadFile(*inputW, s.WRAM[:]); err != nil {
-		fmt.Println(err)
-		return
+		if err == errNoFile {
+			err = nil
+		} else {
+			fmt.Println(err)
+			return
+		}
 	}
 	// load dynamic RAM at $5000..7FFF:
 	if err = loadFile(*input5, s.Dyn[:]); err != nil {
-		fmt.Println(err)
-		return
+		if err == errNoFile {
+			err = nil
+		} else {
+			fmt.Println(err)
+			return
+		}
 	}
 
 	if *trace {
@@ -107,9 +123,11 @@ func main() {
 	}
 }
 
+var errNoFile = fmt.Errorf("no file loaded")
+
 func loadFile(fname string, dest []byte) (err error) {
 	if fname == "" {
-		return
+		return errNoFile
 	}
 
 	var f *os.File
