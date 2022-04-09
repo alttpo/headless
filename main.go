@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/binary"
+	"flag"
 	"fmt"
 	"github.com/alttpo/snes/asm"
 	"github.com/alttpo/snes/emulator/bus"
@@ -23,8 +24,17 @@ func newEmitterAt(s *System, addr uint32, generateText bool) *asm.Emitter {
 func main() {
 	var err error
 
+	trace := flag.Bool("t", false, "CPU tracing")
+	flag.Parse()
+
+	fname := flag.Arg(0)
+	if fname == "" {
+		fmt.Println("required SFC path as first argument")
+		return
+	}
+
 	var f *os.File
-	f, err = os.Open("alttp-jp.sfc")
+	f, err = os.Open(fname)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -53,21 +63,35 @@ func main() {
 		return
 	}
 
+	if *trace {
+		s.LoggerCPU = os.Stdout
+	}
+
 	// start from RESET vector:
 	s.CPU.Reset()
 	frame := uint64(0)
 	for {
-		// execute until WDM is hit, then take a WRAM snapshot:
-		if err = s.Exec(0); err != nil {
-			fmt.Println(err)
-			return
+		// execute until WDM is hit:
+		for {
+			if s.LoggerCPU != nil {
+				s.CPU.DisassembleCurrentPC(s.LoggerCPU)
+				fmt.Fprintln(s.LoggerCPU)
+			}
+
+			// abort = true when WDM with immediate value >= 10 is executed
+			_, abort := s.CPU.Step()
+			if abort {
+				break
+			}
 		}
+
+		// snapshot WRAM:
 		ioutil.WriteFile(fmt.Sprintf("data/%d.wram", frame), s.WRAM[:], 0644)
 
 		if s.CPU.WDM == 0xFF {
 			break
 		} else {
-			fmt.Printf("WDM #$%02x\n", s.CPU.WDM)
+			fmt.Printf("; WDM #$%02x\n", s.CPU.WDM)
 		}
 
 		frame++
