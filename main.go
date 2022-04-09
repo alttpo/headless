@@ -12,6 +12,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"time"
 )
 
 func newEmitterAt(s *System, addr uint32, generateText bool) *asm.Emitter {
@@ -25,6 +26,7 @@ func main() {
 	var err error
 
 	trace := flag.Bool("t", false, "CPU tracing")
+	delay := flag.Duration("d", time.Duration(0), "delay between CPU instructions")
 	flag.Parse()
 
 	fname := flag.Arg(0)
@@ -80,6 +82,11 @@ func main() {
 
 			// abort = true when WDM with immediate value >= 10 is executed
 			_, abort := s.CPU.Step()
+
+			if *delay > 0 {
+				time.Sleep(*delay)
+			}
+
 			if abort {
 				break
 			}
