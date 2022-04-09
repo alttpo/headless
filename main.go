@@ -32,6 +32,7 @@ func main() {
 	fname := flag.Arg(0)
 	if fname == "" {
 		fmt.Println("required SFC path as first argument")
+		flag.Usage()
 		return
 	}
 
