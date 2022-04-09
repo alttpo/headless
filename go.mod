@@ -1,4 +1,4 @@
-module github.com/alttpo/alttpemu
+module github.com/alttpo/headless
 
 go 1.17
 
