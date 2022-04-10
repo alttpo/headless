@@ -507,6 +507,10 @@ func (h *HWIO) Read(address uint32) (value byte) {
 
 func (h *HWIO) Write(address uint32, value byte) {
 	offs := address & 0xFFFF
+	if offs >= 0x5000 {
+		h.Dyn[offs-0x5000] = value
+		return
+	}
 
 	if offs == 0x4200 {
 		// NMITIMEN
