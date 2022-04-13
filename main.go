@@ -406,7 +406,7 @@ func (c *DMAChannel) Transfer(regs *DMARegs, ch int, h *HWIO) {
 
 	if regs.ctrl()&0x80 != 0 {
 		// PPU -> CPU
-		panic("PPU -> CPU DMA transfer not supported!")
+		fmt.Fprintf(os.Stderr, "PPU -> CPU DMA transfer not supported!\n")
 	} else {
 		// CPU -> PPU
 	copyloop:
@@ -454,18 +454,9 @@ func (c *DMAChannel) Transfer(regs *DMARegs, ch int, h *HWIO) {
 					break copyloop
 				}
 				break
-			case 2:
-				panic("mode 2!!!")
-			case 3:
-				panic("mode 3!!!")
-			case 4:
-				panic("mode 4!!!")
-			case 5:
-				panic("mode 5!!!")
-			case 6:
-				panic("mode 6!!!")
-			case 7:
-				panic("mode 7!!!")
+			default:
+				fmt.Fprintf(os.Stderr, "unimplemented DMA transfer mode %d\n", mode)
+				break copyloop
 			}
 		}
 	}
@@ -601,7 +592,7 @@ func (h *HWIO) Write(address uint32, value byte) {
 		}
 		h.ppu.addrRemapping = (value & 0x0C) >> 2
 		if h.ppu.addrRemapping != 0 {
-			panic(fmt.Errorf("unsupported VRAM address remapping mode %d", h.ppu.addrRemapping))
+			fmt.Fprintf(os.Stderr, "unsupported VRAM address remapping mode %d", h.ppu.addrRemapping)
 		}
 		//if h.s.Logger != nil {
 		//	fmt.Fprintf(h.s.Logger, "PC=$%06x\n", h.s.GetPC())
